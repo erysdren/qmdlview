@@ -4,6 +4,8 @@
 
 a software-rendered quake model viewer written in C. currently only supports standard version 6 quake mdl files.
 
+it can run on modern platforms with SDL2 or on DOS with VGA mode 13.
+
 ## todo
 
 - add support for onseam texture coords
