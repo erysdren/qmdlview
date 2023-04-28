@@ -1,0 +1,11 @@
+
+*.exe
+qmdlview
+
+.vscode/
+*.code-workspace
+
+local/
+progs/
+
+cmake-build-*/
