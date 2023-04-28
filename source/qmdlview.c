@@ -411,6 +411,9 @@ int main(int argc, char **argv)
 	/* main loop */
 	while (platform_running())
 	{
+		/* variables */
+		int dx, dy;
+
 		/* frame start */
 		platform_frame_start();
 
@@ -435,15 +438,28 @@ int main(int argc, char **argv)
 
 		if (platform_key(KEY_ESCAPE)) break;
 
+		/* process mouse */
+		if (platform_mouse(NULL, NULL, &dx, &dy))
+		{
+			platform_mouse_capture();
+			s3l_scene.camera.transform.rotation.y -= dx;
+			s3l_scene.camera.transform.rotation.x -= dy;
+		}
+		else
+		{
+			platform_mouse_release();
+		}
+
 		/* clear screen */
 		platform_screen_clear(PALETTE(255));
 
-		/* draw */
+		/* draw model */
 		S3L_newFrame();
 		S3L_drawScene(s3l_scene);
 
 		/* draw text */
-		draw_text(1, 1, PALETTE(254), "WASD: move\nARROW KEYS: look\nTAB: wireframe\nESCAPE: quit");
+		draw_text(2, 2, PALETTE(254), "WASD: move\nARROW KEYS: look\nTAB: wireframe\nESCAPE: quit");
+		draw_text(2, S3L_RESOLUTION_Y - 9, PALETTE(254), "MOUSE: capture with click");
 
 		/* frame end */
 		platform_frame_end();

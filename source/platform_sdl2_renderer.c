@@ -162,6 +162,9 @@ void platform_quit()
 	if (context.window != NULL) SDL_DestroyWindow(context.window);
 	if (context.pixels != NULL) free(context.pixels);
 
+	/* release mouse */
+	platform_mouse_release();
+
 	/* sdl2 */
 	SDL_Quit();
 }
@@ -191,6 +194,14 @@ void platform_frame_start()
 		{
 			case SDL_QUIT:
 				context.running = SDL_FALSE;
+				break;
+
+			case SDL_MOUSEBUTTONDOWN:
+				context.mouse.b = SDL_TRUE;
+				break;
+
+			case SDL_MOUSEBUTTONUP:
+				context.mouse.b = SDL_FALSE;
 				break;
 
 			case SDL_MOUSEMOTION:
@@ -309,7 +320,7 @@ void platform_draw_pixel(uint16_t x, uint16_t y, uint32_t c)
  * platform_mouse
  */
 
-void platform_mouse(int *x, int *y, int *dx, int *dy)
+int platform_mouse(int *x, int *y, int *dx, int *dy)
 {
 	/* set ptrs */
 	if (x) *x = context.mouse.x;
@@ -320,6 +331,9 @@ void platform_mouse(int *x, int *y, int *dx, int *dy)
 	/* reset delta after each read? */
 	context.mouse.dx = 0;
 	context.mouse.dy = 0;
+
+	/* return button mask */
+	return context.mouse.b;
 }
 
 /*
@@ -339,4 +353,22 @@ void platform_error(const char *s, ...)
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", context.scratch, NULL);
 
 	exit(1);
+}
+
+/*
+ * platform_mouse_capture
+ */
+
+void platform_mouse_capture()
+{
+	SDL_SetRelativeMouseMode(SDL_TRUE);
+}
+
+/*
+ * platform_mouse_release
+ */
+
+void platform_mouse_release()
+{
+	SDL_SetRelativeMouseMode(SDL_FALSE);
 }

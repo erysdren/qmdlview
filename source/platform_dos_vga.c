@@ -231,7 +231,7 @@ void platform_draw_pixel(uint16_t x, uint16_t y, uint32_t c)
  * platform_mouse
  */
 
-void platform_mouse(int *x, int *y, int *dx, int *dy)
+int platform_mouse(int *x, int *y, int *dx, int *dy)
 {
 	/* set ptrs */
 	if (x) *x = context.mouse.x;
@@ -242,6 +242,9 @@ void platform_mouse(int *x, int *y, int *dx, int *dy)
 	/* reset delta after each read? */
 	context.mouse.dx = 0;
 	context.mouse.dy = 0;
+
+	/* return button mask */
+	return context.mouse.b;
 }
 
 /*
@@ -259,4 +262,22 @@ void platform_error(const char *s, ...)
 	va_end(ap);
 
 	exit(1);
+}
+
+/*
+ * platform_mouse_capture
+ */
+
+void platform_mouse_capture()
+{
+	return;
+}
+
+/*
+ * platform_mouse_release
+ */
+
+void platform_mouse_release()
+{
+	return;
 }
