@@ -117,14 +117,6 @@
  *
  */
 
-#if BPP == 8
-typedef uint8_t pixel_t;
-#elif BPP == 32
-typedef uint32_t pixel_t;
-#else
-#error no pixel size defined!
-#endif
-
 typedef struct
 {
 	uint8_t r, g, b;
@@ -136,7 +128,6 @@ typedef struct
  *
  */
 
-pixel_t drawcolor;
 mdl_t *mdl;
 
 S3L_Unit *s3l_vertices;
@@ -199,7 +190,7 @@ static inline void S3L_Pixel(S3L_PixelInfo *pixel)
  * draw_font8x8
  */
 
-void draw_font8x8(int x, int y, pixel_t c, uint8_t *bitmap)
+void draw_font8x8(int x, int y, uint32_t c, uint8_t *bitmap)
 {
 	/* variables */
 	int xx, yy;
@@ -221,7 +212,7 @@ void draw_font8x8(int x, int y, pixel_t c, uint8_t *bitmap)
  * draw_text
  */
 
-void draw_text(int x, int y, pixel_t c, const char *fmt, ...)
+void draw_text(int x, int y, uint32_t c, const char *fmt, ...)
 {
 	/* variables */
 	int i, p, n;
