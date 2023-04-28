@@ -1,5 +1,8 @@
 
 *.exe
+*.swp
+*.SWP
+*.EXE
 qmdlview
 
 .vscode/
@@ -9,3 +12,6 @@ local/
 progs/
 
 cmake-build-*/
+
+dosbox-x.conf
+run_dosbox-x.sh

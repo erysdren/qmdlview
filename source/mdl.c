@@ -69,6 +69,7 @@ mdl_t *MDL_Load(const char *filename)
 
 	/* open file */
 	file = fopen(filename, "rb");
+	if (file == NULL) platform_error("couldn't load %s", filename);
 
 	/* allocate memory */
 	mdl = calloc(1, sizeof(mdl_t));

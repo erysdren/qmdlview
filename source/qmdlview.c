@@ -51,8 +51,13 @@
 #include <string.h>
 
 /* drummyfish */
+#ifdef QMDLVIEW_DOS
+#define S3L_RESOLUTION_X 320
+#define S3L_RESOLUTION_Y 200
+#else
 #define S3L_RESOLUTION_X 640
 #define S3L_RESOLUTION_Y 480
+#endif
 #define S3L_PIXEL_FUNCTION S3L_Pixel
 #define S3L_Z_BUFFER 1
 #define S3L_PERSPECTIVE_CORRECTION 1
@@ -71,13 +76,21 @@
 /* font8x8 */
 #include "font8x8_basic.h"
 
+#ifdef QMDLVIEW_DOS
+#include "dos_helpers.h"
+#endif
+
 /*
  *
  * macros
  *
  */
 
+#ifdef QMDLVIEW_DOS
+#define BPP 8
+#else
 #define BPP 32
+#endif
 
 #define MDL_MAGIC 0x4f504449
 
@@ -243,6 +256,16 @@ void qmdlview_init()
 	/* init platform */
 	if (!platform_init(S3L_RESOLUTION_X, S3L_RESOLUTION_Y, "qmdlview"))
 		platform_error("could not init platform!\n");
+
+	/* set palette */
+	#ifdef QMDLVIEW_DOS
+
+	for (int i = 0; i < 256; i++)
+	{
+		dos_set_palette_color(i, PALETTE_RGB(i)->r, PALETTE_RGB(i)->g, PALETTE_RGB(i)->b);
+	}
+
+	#endif
 }
 
 /*
