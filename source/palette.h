@@ -1,3 +1,6 @@
+
+/* quake palette */
+
 uint8_t palette[] = {
 	0, 0, 0,
 	15, 15, 15,
