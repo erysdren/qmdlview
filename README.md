@@ -1,6 +1,8 @@
 # qmdlview
 
-a software-rendered quake model viewer. currently only supports standard version 6 quake mdl files.
+![an image of the final boss from quake](.github/qmdlview.png)
+
+a software-rendered quake model viewer written in C. currently only supports standard version 6 quake mdl files.
 
 ## todo
 
