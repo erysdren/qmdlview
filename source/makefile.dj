@@ -39,7 +39,7 @@
 
 CC = i586-pc-msdosdjgpp-gcc 
 
-CFLAGS += -Wall -pedantic -O2 -Wno-unused-function -DQMDLVIEW_DOS
+CFLAGS += -Wall -pedantic -O2 -DQMDLVIEW_DOS
 
 SOURCES = qmdlview.c mdl.c
 

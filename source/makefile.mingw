@@ -39,9 +39,9 @@
 
 CC = x86_64-w64-mingw32-gcc
 
-CFLAGS += -Wall -pedantic -O2
+CFLAGS += -Wall -pedantic -O2 -lole32 -loleaut32 -lcomdlg32
 
-SOURCES = qmdlview.c mdl.c
+SOURCES = qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
 
 SDL2 = platform_sdl2_renderer.c `sdl2-config --libs --cflags`
 

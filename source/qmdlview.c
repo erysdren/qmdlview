@@ -62,7 +62,7 @@
 #define S3L_Z_BUFFER 1
 #define S3L_PERSPECTIVE_CORRECTION 1
 #define S3L_NEAR_CROSS_STRATEGY 3
-#include "small3dlib.h"
+#include "thirdparty/small3dlib.h"
 
 /* platform */
 #include "platform.h"
@@ -74,10 +74,13 @@
 #include "mdl.h"
 
 /* font8x8 */
-#include "font8x8_basic.h"
+#include "thirdparty/font8x8_basic.h"
 
+/* dos helpers */
 #ifdef QMDLVIEW_DOS
 #include "dos_helpers.h"
+#else
+#include "thirdparty/tinyfiledialogs.h"
 #endif
 
 /*
@@ -144,6 +147,9 @@ S3L_Scene s3l_scene;
 S3L_Model3D s3l_model;
 
 int wireframe;
+
+const char *mdl_patterns[1] = {"*.mdl"};
+const char *open_filename;
 
 /*
  *
@@ -372,14 +378,35 @@ int main(int argc, char **argv)
 	/* variables */
 	S3L_Vec4 v_forward, v_up, v_right;
 
-	/* init */
-	qmdlview_init();
+	/* init vectors */
 	S3L_vec4Init(&v_forward);
 	S3L_vec4Init(&v_up);
 	S3L_vec4Init(&v_right);
 
-	/* open model */
-	qmdlview_open(argv[1]);
+	/* open model from command line */
+	if (argc > 1)
+	{
+		qmdlview_init();
+		qmdlview_open(argv[1]);
+	}
+	else
+	{
+		#ifdef QMDLVIEW_DOS
+
+		platform_error("you must provide an input file!");
+
+		#else
+
+		open_filename = tinyfd_openFileDialog("Choose an MDL File", "", 1, mdl_patterns, "Quake MDL Files", 0);
+
+		if (open_filename == NULL)
+			platform_error("open_filename is NULL!");
+
+		qmdlview_init();
+		qmdlview_open(open_filename);
+
+		#endif
+	}
 
 	/* main loop */
 	while (platform_running())
