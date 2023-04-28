@@ -8,13 +8,13 @@ it can run on modern platforms with SDL2 or on DOS with VGA mode 13.
 
 ## todo
 
-- add support for onseam texture coords
-- add support for multiple frames and skins
-- add support for qtest (version 3) models
-- add support for quake 2 (version 8) models
-- ~~add a dos platform target~~
-- add some basic editing features
-- clean up mdl.c
+- [ ] add support for onseam texture coords
+- [ ] add support for multiple frames and skins
+- [ ] add support for qtest (version 3) models
+- [ ] add support for quake 2 (version 8) models
+- [x] add a dos platform target
+- [ ] add some basic editing features
+- [ ] clean up mdl.c
 
 ## thirdparty
 
