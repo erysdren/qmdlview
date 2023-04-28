@@ -165,6 +165,7 @@ static void dos_clear_screen();
 static void dos_graphics_clear_screen();
 static void dos_graphics_putb(uint8_t *s, size_t n);
 static void dos_set_palette_color(uint8_t i, uint8_t r, uint8_t g, uint8_t b);
+static void dos_set_palette(uint8_t *buffer);
 
 /* text mode functions */
 static void dos_text_set_cursor_shape(uint16_t shape);
@@ -240,12 +241,28 @@ static void dos_graphics_putb(uint8_t *s, size_t n)
 }
 
 /* set a color in the palette */
-void dos_set_palette_color(uint8_t i, uint8_t r, uint8_t g, uint8_t b)
+static void dos_set_palette_color(uint8_t i, uint8_t r, uint8_t g, uint8_t b)
 {
 	outp(0x3c8, i);
 	outp(0x3c9, (r * 63) / 255);
 	outp(0x3c9, (g * 63) / 255);
 	outp(0x3c9, (b * 63) / 255);
+}
+
+/* set palette from buffer */
+static void dos_set_palette(uint8_t *buffer)
+{
+	int i;
+	uint8_t r, g, b;
+
+	for (i = 0; i < 256; i++)
+	{
+		r = buffer[i * 3];
+		g = buffer[(i * 3) + 1];
+		b = buffer[(i * 3) + 2];
+
+		dos_set_palette_color(i, r, g, b);
+	}
 }
 
 /*
