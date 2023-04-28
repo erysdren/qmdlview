@@ -20,6 +20,7 @@ it can run on modern platforms with SDL2 or on DOS with VGA mode 13.
 
 * [small3dlib](https://gitlab.com/drummyfish/small3dlib)
 * [font8x8](https://github.com/dhepper/font8x8)
+* [tinyfiledialogs](https://sourceforge.net/projects/tinyfiledialogs/)
 
 ## license
 
