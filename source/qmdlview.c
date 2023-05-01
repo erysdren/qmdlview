@@ -448,8 +448,7 @@ int main(int argc, char **argv)
 		S3L_drawScene(s3l_scene);
 
 		/* draw text */
-		draw_text(2, 2, PALETTE(254), "WASD: move\nARROW KEYS: look\nTAB: wireframe\nESCAPE: quit");
-		draw_text(2, S3L_RESOLUTION_Y - 9, PALETTE(254), "MOUSE: capture with click");
+		draw_text(2, 2, PALETTE(254), "WASD: move\nARROW KEYS: look\nTAB: wireframe\nESCAPE: quit\nMOUSE: click");
 
 		/* frame end */
 		platform_frame_end();
