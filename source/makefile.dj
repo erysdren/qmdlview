@@ -41,7 +41,7 @@ CC = i586-pc-msdosdjgpp-gcc
 
 CFLAGS += -Wall -pedantic -O2 -DQMDLVIEW_DOS
 
-SOURCES = qmdlview.c mdl.c
+SOURCES = qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
 
 DOS = platform_dos_vga.c
 

@@ -79,9 +79,10 @@
 /* dos helpers */
 #ifdef QMDLVIEW_DOS
 #include "dos_helpers.h"
-#else
-#include "thirdparty/tinyfiledialogs.h"
 #endif
+
+/* tinyfiledialogs */
+#include "thirdparty/tinyfiledialogs.h"
 
 /*
  *
@@ -384,9 +385,9 @@ int main(int argc, char **argv)
 	{
 		#ifdef QMDLVIEW_DOS
 
-		platform_error("you must provide an input file!");
+		tinyfd_forceConsole = 1;
 
-		#else
+		#endif
 
 		open_filename = tinyfd_openFileDialog("Choose an MDL File", "", 1, mdl_patterns, "Quake MDL Files", 0);
 
@@ -395,8 +396,6 @@ int main(int argc, char **argv)
 
 		qmdlview_init();
 		qmdlview_open(open_filename);
-
-		#endif
 	}
 
 	/* main loop */
