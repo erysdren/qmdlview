@@ -221,7 +221,7 @@ void platform_screen_clear(uint32_t c)
 {
 	int i;
 
-	for (i = 0; i < context.width * context.height; i++)
+	for (i = 0; i < context.width * context.height * (context.bpp / 8); i++)
 		context.pixels[i] = c;
 }
 
@@ -308,7 +308,7 @@ void platform_mouse_release()
 int main(int argc, char **argv)
 {
 	/* init platform */
-	platform_init(640, 480, 8, "hello");
+	platform_init(640, 480, 32, "hello");
 
 	while (platform_running())
 	{
@@ -316,7 +316,7 @@ int main(int argc, char **argv)
 
 		if (platform_key(KEY_ESCAPE)) break;
 
-		platform_screen_clear(128);
+		platform_screen_clear(UINT32_MAX);
 
 		platform_frame_end();
 	}
