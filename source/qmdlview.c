@@ -67,6 +67,12 @@
 #endif
 #include "platform.h"
 
+/* bleck */
+#ifndef QMDLVIEW_DOS
+#define KEY_PLUS KEY_KP_PLUS
+#define KEY_MINUS KEY_KP_MINUS
+#endif
+
 /* quake palette */
 #include "palette.h"
 
@@ -499,8 +505,8 @@ int main(int argc, char **argv)
 		platform_screen_clear(PALETTE(255));
 
 		/* frame num */
-		if (platform_key(KEY_KP_PLUS)) frame_num++;
-		if (platform_key(KEY_KP_MINUS)) frame_num--;
+		if (platform_key(KEY_PLUS)) frame_num++;
+		if (platform_key(KEY_MINUS)) frame_num--;
 		if (frame_num < 0) frame_num = 0;
 		if (frame_num >= mdl->header->num_frames) frame_num = mdl->header->num_frames - 1;
 		s3l_scene.models = models[frame_num];
