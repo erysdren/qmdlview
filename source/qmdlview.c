@@ -123,6 +123,8 @@ typedef struct
 	uint8_t r, g, b;
 } rgb24_t;
 
+typedef S3L_Model3D model_t;
+
 /*
  *
  * globals
@@ -137,6 +139,9 @@ S3L_Unit *s3l_uvs;
 S3L_Index *s3l_uv_indices;
 S3L_Scene s3l_scene;
 S3L_Model3D s3l_model;
+model_t *models[256];
+
+int frame_num;
 
 int wireframe;
 
@@ -185,6 +190,44 @@ static inline void S3L_Pixel(S3L_PixelInfo *pixel)
 	/* draw wireframe */
 	if (wireframe && (pixel->barycentric[0] == 0 || pixel->barycentric[1] == 0 || pixel->barycentric[2] == 0))
 		platform_draw_pixel(pixel->x, pixel->y, PALETTE(254));
+}
+
+/*
+ * model_alloc
+ */
+
+model_t *model_alloc(int num_vertices, int num_triangles)
+{
+	/* variables */
+	model_t *model;
+	S3L_Unit *vertices;
+	S3L_Index *triangles;
+
+	/* alloc model */
+	model = malloc(sizeof(model_t));
+	if (model == NULL) return NULL;
+
+	/* alloc elements */
+	vertices = malloc(sizeof(S3L_Unit) * num_vertices * 3);
+	triangles = malloc(sizeof(S3L_Index) * num_triangles * 3);
+	if (vertices == NULL || triangles == NULL)
+		return NULL;
+
+	/* init model */
+	S3L_model3DInit(vertices, num_vertices, triangles, num_triangles, model);
+
+	/* return ptr */
+	return model;
+}
+
+void model_free(model_t *model)
+{
+	if (model)
+	{
+		if (model->vertices) free((void *)model->vertices);
+		if (model->triangles) free((void *)model->triangles);
+		free(model);
+	}
 }
 
 /*
@@ -272,12 +315,20 @@ void qmdlview_init()
 
 void qmdlview_deinit()
 {
+	int i;
+
 	/* free memory */
+	for (i = 0; i < mdl->header->num_frames; i++)
+	{
+		model_free(models[i]);
+	}
+
 	if (mdl) MDL_Free(mdl);
 	if (s3l_vertices) free(s3l_vertices);
 	if (s3l_triangles) free(s3l_triangles);
 	if (s3l_uv_indices) free(s3l_uv_indices);
 	if (s3l_uvs) free(s3l_uvs);
+
 
 	/* close platform */
 	platform_quit();
@@ -290,35 +341,45 @@ void qmdlview_deinit()
 void qmdlview_open(const char *filename)
 {
 	/* variables */
-	int i;
+	int i, v, t;
 	S3L_Vec4 origin;
 
 	/* load model */
 	mdl = MDL_Load(filename);
 	if (mdl == NULL) platform_error("couldn't load %s", filename);
 
-	/* allocate s3l vertices */
-	s3l_vertices = calloc(mdl->header->num_vertices, sizeof(S3L_Unit) * 3);
-	if (s3l_vertices == NULL) platform_error("couldn't allocate vertices");
-
-	/* calculate vertices from frame 0 */
-	for (i = 0; i < mdl->header->num_vertices; i++)
+	/* make a model for each frame */
+	for (i = 0; i < mdl->header->num_frames; i++)
 	{
-		s3l_vertices[i * 3] = UNIT(((float)mdl->frames[0].vertices[i].coordinates[0] * mdl->header->scale[0]) + mdl->header->translation[0]);
-		s3l_vertices[(i * 3) + 1] = UNIT(((float)mdl->frames[0].vertices[i].coordinates[1] * mdl->header->scale[1]) + mdl->header->translation[1]);
-		s3l_vertices[(i * 3) + 2] = UNIT(((float)mdl->frames[0].vertices[i].coordinates[2] * mdl->header->scale[2]) + mdl->header->translation[2]);
-	}
+		/* variables */
+		S3L_Unit *vertices;
+		S3L_Index *triangles;
 
-	/* allocate s3l triangles */
-	s3l_triangles = calloc(mdl->header->num_faces, sizeof(S3L_Index) * 3);
-	if (s3l_triangles == NULL) platform_error("couldn't allocate triangles");
+		/* alloc model */
+		models[i] = model_alloc(mdl->header->num_vertices, mdl->header->num_faces);
 
-	/* calculate triangles */
-	for (i = 0; i < mdl->header->num_faces; i++)
-	{
-		s3l_triangles[i * 3] = mdl->faces[i].vertex_indicies[0];
-		s3l_triangles[(i * 3) + 1] = mdl->faces[i].vertex_indicies[1];
-		s3l_triangles[(i * 3) + 2] = mdl->faces[i].vertex_indicies[2];
+		/* assign ptrs */
+		vertices = (S3L_Unit *)models[i]->vertices;
+		triangles = (S3L_Index *)models[i]->triangles;
+
+		/* calculate vertices */
+		for (v = 0; v < mdl->header->num_vertices; v++)
+		{
+			vertices[v * 3] = UNIT(((float)mdl->frames[i].vertices[v].coordinates[0] * mdl->header->scale[0]) + mdl->header->translation[0]);
+			vertices[(v * 3) + 1] = UNIT(((float)mdl->frames[i].vertices[v].coordinates[1] * mdl->header->scale[1]) + mdl->header->translation[1]);
+			vertices[(v * 3) + 2] = UNIT(((float)mdl->frames[i].vertices[v].coordinates[2] * mdl->header->scale[2]) + mdl->header->translation[2]);
+		}
+
+		/* calculate triangles */
+		for (t = 0; t < mdl->header->num_faces; t++)
+		{
+			triangles[t * 3] = mdl->faces[t].vertex_indicies[0];
+			triangles[(t * 3) + 1] = mdl->faces[t].vertex_indicies[1];
+			triangles[(t * 3) + 2] = mdl->faces[t].vertex_indicies[2];
+		}
+
+		/* fix transform */
+		models[i]->transform.rotation.x += 128;
 	}
 
 	/* allocate s3l uvs */
@@ -344,14 +405,8 @@ void qmdlview_open(const char *filename)
 		s3l_uv_indices[(i * 3) + 2] = mdl->faces[i].vertex_indicies[2];
 	}
 
-	/* init s3l model */
-	S3L_model3DInit(s3l_vertices, mdl->header->num_vertices, s3l_triangles, mdl->header->num_faces, &s3l_model);
-
-	/* fix rotation */
-	s3l_model.transform.rotation.x += 128;
-
 	/* init s3l scene */
-	S3L_sceneInit(&s3l_model, 1, &s3l_scene);
+	S3L_sceneInit(models[0], 1, &s3l_scene);
 
 	s3l_scene.camera.transform.translation.x += S3L_F * 128;
 	s3l_scene.camera.transform.translation.z += S3L_F * 128;
@@ -443,12 +498,19 @@ int main(int argc, char **argv)
 		/* clear screen */
 		platform_screen_clear(PALETTE(255));
 
+		/* frame num */
+		if (platform_key(KEY_KP_PLUS)) frame_num++;
+		if (platform_key(KEY_KP_MINUS)) frame_num--;
+		if (frame_num < 0) frame_num = 0;
+		if (frame_num >= mdl->header->num_frames) frame_num = mdl->header->num_frames - 1;
+		s3l_scene.models = models[frame_num];
+
 		/* draw model */
 		S3L_newFrame();
 		S3L_drawScene(s3l_scene);
 
 		/* draw text */
-		draw_text(2, 2, PALETTE(254), "WASD: move\nARROW KEYS: look\nTAB: wireframe\nESCAPE: quit\nMOUSE: click");
+		draw_text(2, 2, PALETTE(254), "WASD: move\nARROW KEYS: look\nTAB: wireframe\nESCAPE: quit\nMOUSE: click\nFRAME: %d / %d", frame_num + 1, mdl->header->num_frames);
 
 		/* frame end */
 		platform_frame_end();
