@@ -40,10 +40,10 @@
  * ************************************************************************* */
 
 /*
- * keyboard scancodes (dos)
+ * keyboard scancodes (from sdl2)
  */
 
-#ifdef QMDLVIEW_DOS
+#if PLATFORM_DOS
 
 enum
 {
@@ -132,11 +132,7 @@ enum
 	KEY_F12 = 0x58
 };
 
-#else
-
-/*
- * keyboard scancodes (from sdl2)
- */
+#elif PLATFORM_SDL2
 
 enum
 {
@@ -361,7 +357,7 @@ enum
  * functions
  */
 
-int platform_init(int w, int h, const char *title);
+int platform_init(int w, int h, int bpp, const char *title);
 void platform_quit();
 int platform_running();
 void platform_frame_start();

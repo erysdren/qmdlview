@@ -43,7 +43,7 @@ CFLAGS += -Wall -pedantic -O2 -DQMDLVIEW_DOS
 
 SOURCES = qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
 
-DOS = platform_dos_vga.c
+DOS = platform_dos.c
 
 all: clean qmdlview
 

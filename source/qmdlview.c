@@ -51,13 +51,8 @@
 #include <string.h>
 
 /* drummyfish */
-#ifdef QMDLVIEW_DOS
-#define S3L_RESOLUTION_X 320
-#define S3L_RESOLUTION_Y 200
-#else
 #define S3L_RESOLUTION_X 640
 #define S3L_RESOLUTION_Y 480
-#endif
 #define S3L_PIXEL_FUNCTION S3L_Pixel
 #define S3L_Z_BUFFER 1
 #define S3L_PERSPECTIVE_CORRECTION 1
@@ -65,6 +60,11 @@
 #include "thirdparty/small3dlib.h"
 
 /* platform */
+#ifdef QMDLVIEW_DOS
+#define PLATFORM_DOS 1
+#else
+#define PLATFORM_SDL2 1
+#endif
 #include "platform.h"
 
 /* quake palette */
@@ -252,7 +252,7 @@ void draw_text(int x, int y, uint32_t c, const char *fmt, ...)
 void qmdlview_init()
 {
 	/* init platform */
-	if (!platform_init(S3L_RESOLUTION_X, S3L_RESOLUTION_Y, "qmdlview"))
+	if (!platform_init(S3L_RESOLUTION_X, S3L_RESOLUTION_Y, BPP, "qmdlview"))
 		platform_error("could not init platform!\n");
 
 	/* set palette */

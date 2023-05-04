@@ -54,6 +54,7 @@
 #include "dos_helpers.h"
 
 /* platform */
+#define PLATFORM_DOS 1
 #include "platform.h"
 
 /*
@@ -69,7 +70,9 @@ struct
 	uint8_t *pixels;
 	int width;
 	int height;
+	int bpp;
 	int old_mode;
+	int mode;
 
 	struct
 	{
@@ -84,12 +87,18 @@ struct
 	char keys[256];
 	char key_last;
 
-	#ifdef __DJGPP__
 	_go32_dpmi_seginfo kbhandler_old;
 	_go32_dpmi_seginfo kbhandler_new;
-	#endif
+
+	/* vesa */
+	vesa_info_t vesa_info;
+	vesa_mode_info_t vesa_mode_info;
 
 } context;
+
+/*
+ * kbhandler
+ */
 
 void kbhandler()
 {
@@ -102,40 +111,48 @@ void kbhandler()
  * platform_init
  */
 
-int platform_init(int w, int h, const char *title)
+int platform_init(int w, int h, int bpp, const char *title)
 {
 	/* get current video mode */
 	context.old_mode = dos_get_mode();
 
-	/* mode 13 only */
-	dos_set_mode(DOS_MODE_13);
-	if (dos_get_mode() != DOS_MODE_13) return 0;
-
 	/* suppress warnings */
 	(void)title;
-	(void)w;
-	(void)h;
+
+	/* get vesa info  */
+	dos_vesa_get_info(&context.vesa_info);
+	context.mode = dos_vesa_find_mode(w, h, bpp);
+	if (!context.mode)
+		platform_error("couldn't get vesa mode");
+
+	/* get vesa mode info */
+	if (!dos_vesa_get_mode_info(&context.vesa_mode_info, context.mode))
+		platform_error("couldn't get vesa mode info");
+
+	/* set vesa mode */
+	dos_vesa_set_mode(context.mode);
 
 	/* enable mouse */
 	dos_mouse_enable();
 	dos_mouse_hide();
 
 	/* set values */
-	context.width = 320;
-	context.height = 200;
+	context.width = w;
+	context.height = h;
+	context.bpp = bpp;
 	context.running = 1;
 
 	/* alloc pixels */
-	context.pixels = malloc(context.width * context.height * sizeof(uint8_t));
-	if (context.pixels == NULL) return 0;
+	context.pixels = malloc(context.width * context.height * (bpp / 8));
+	if (context.pixels == NULL)
+		platform_error("failed malloc");
 
-	#ifdef __DJGPP__
+	/* setup keyboard handler */
 	_go32_dpmi_get_protected_mode_interrupt_vector(9, &context.kbhandler_old);
 	context.kbhandler_new.pm_offset = (int)kbhandler;
 	context.kbhandler_new.pm_selector = _go32_my_cs();
 	_go32_dpmi_allocate_iret_wrapper(&context.kbhandler_new);
 	_go32_dpmi_set_protected_mode_interrupt_vector(9, &context.kbhandler_new);
-	#endif
 
 	/* return success */
 	return 1;
@@ -147,14 +164,13 @@ int platform_init(int w, int h, const char *title)
 
 void platform_quit()
 {
-	#ifdef __DJGPP__
-	_go32_dpmi_set_protected_mode_interrupt_vector(9, &context.kbhandler_old);
-	_go32_dpmi_free_iret_wrapper(&context.kbhandler_new);
-	#endif
-
 	if (context.pixels) free(context.pixels);
 	dos_mouse_hide();
 	dos_set_mode(context.old_mode);
+
+	/* restore keyboard handler */
+	_go32_dpmi_set_protected_mode_interrupt_vector(9, &context.kbhandler_old);
+	_go32_dpmi_free_iret_wrapper(&context.kbhandler_new);
 }
 
 /*
@@ -194,7 +210,7 @@ void platform_frame_start()
 
 void platform_frame_end()
 {
-	dos_graphics_putb(context.pixels, context.width * context.height);
+	dos_vesa_putb(&context.vesa_mode_info, context.pixels, context.width * context.height * (context.bpp / 8));
 }
 
 /*
@@ -243,7 +259,6 @@ int platform_mouse(int *x, int *y, int *dx, int *dy)
 	context.mouse.dx = 0;
 	context.mouse.dy = 0;
 
-	/* return button mask */
 	return context.mouse.b;
 }
 
@@ -270,7 +285,7 @@ void platform_error(const char *s, ...)
 
 void platform_mouse_capture()
 {
-	return;
+
 }
 
 /*
@@ -279,5 +294,38 @@ void platform_mouse_capture()
 
 void platform_mouse_release()
 {
-	return;
+
 }
+
+/*
+ * platform set test
+ */
+
+#ifdef PLATFORM_SELF_TEST
+
+#define ARGB(r, g, b, a) (((a) << 24) | ((r) << 16) | ((g) << 8) | (b))
+
+int main(int argc, char **argv)
+{
+	/* init platform */
+	platform_init(640, 480, 8, "hello");
+
+	while (platform_running())
+	{
+		platform_frame_start();
+
+		if (platform_key(KEY_ESCAPE)) break;
+
+		platform_screen_clear(128);
+
+		platform_frame_end();
+	}
+
+	/* quit */
+	platform_quit();
+
+	/* return success */
+	return 0;
+}
+
+#endif

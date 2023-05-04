@@ -52,6 +52,7 @@
 #include <SDL2/SDL.h>
 
 /* platform */
+#define PLATFORM_SDL2 1
 #include "platform.h"
 
 /*
@@ -99,11 +100,14 @@ struct
  * platform_init
  */
 
-int platform_init(int w, int h, const char *title)
+int platform_init(int w, int h, int bpp, const char *title)
 {
 	/* init everything */
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 		return SDL_FALSE;
+
+	/* suppress warnings */
+	(void)bpp;
 
 	/* create window */
 	context.window = SDL_CreateWindow(
