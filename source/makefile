@@ -41,7 +41,7 @@ CFLAGS += -Wall -pedantic -O2
 
 SOURCES = qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
 
-SDL2 = platform_sdl2_renderer.c `sdl2-config --libs --cflags`
+SDL2 = platform_sdl2.c `sdl2-config --libs --cflags`
 
 all: clean qmdlview
 

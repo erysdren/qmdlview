@@ -460,13 +460,10 @@ int main(int argc, char **argv)
 	}
 
 	/* main loop */
-	while (platform_running())
+	while (platform_frame())
 	{
 		/* variables */
 		int dx, dy;
-
-		/* frame start */
-		platform_frame_start();
 
 		/* get movedir */
 		S3L_rotationToDirections(s3l_scene.camera.transform.rotation, S3L_F, &v_forward, &v_right, &v_up);
@@ -517,9 +514,6 @@ int main(int argc, char **argv)
 
 		/* draw text */
 		draw_text(2, 2, PALETTE(254), "WASD: move\nARROW KEYS: look\nTAB: wireframe\nESCAPE: quit\nMOUSE: click\nFRAME: %d / %d", frame_num + 1, mdl->header->num_frames);
-
-		/* frame end */
-		platform_frame_end();
 	}
 
 	/* deinit */

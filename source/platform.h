@@ -132,7 +132,7 @@ enum
 	KEY_F12 = 0x58
 };
 
-#elif PLATFORM_SDL2
+#elif PLATFORM_SDL2 || PLATFORM_SDL
 
 enum
 {
@@ -359,9 +359,7 @@ enum
 
 int platform_init(int w, int h, int bpp, const char *title);
 void platform_quit();
-int platform_running();
-void platform_frame_start();
-void platform_frame_end();
+int platform_frame();
 void platform_screen_clear(uint32_t c);
 int platform_key(int sc);
 void platform_draw_pixel(uint16_t x, uint16_t y, uint32_t c);
