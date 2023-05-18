@@ -326,8 +326,15 @@ int qmdlview_open(const char *filename)
 				y = (mdl->frames[i].vertices[mdl->faces[f].vertex_indicies[v]].coordinates[1] * mdl->header->scale[1]) + mdl->header->translation[1];
 				z = (mdl->frames[i].vertices[mdl->faces[f].vertex_indicies[v]].coordinates[2] * mdl->header->scale[2]) + mdl->header->translation[2];
 
-				s = (float)mdl->texcoords[mdl->faces[f].vertex_indicies[v]].s / (float)mdl->header->skin_width;
-				t = (float)mdl->texcoords[mdl->faces[f].vertex_indicies[v]].t / (float)mdl->header->skin_height;
+				s = (float)mdl->texcoords[mdl->faces[f].vertex_indicies[v]].s;
+				t = (float)mdl->texcoords[mdl->faces[f].vertex_indicies[v]].t;
+
+				/* handle onseam */
+				if (mdl->faces[f].face_type == 0 && mdl->texcoords[mdl->faces[f].vertex_indicies[v]].onseam)
+					s += (float)mdl->header->skin_width / 2.0f;
+
+				s /= (float)mdl->header->skin_width;
+				t /= (float)mdl->header->skin_height;
 
 				glTexCoord2f(s, t);
 				glVertex3f(x, y, z);
