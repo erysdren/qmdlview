@@ -487,6 +487,7 @@ int main(int argc, char **argv)
 
 		/* draw model */
 		glRotatef(-90, 1, 0, 0);
+		glPolygonMode(GL_FRONT, GL_FILL);
 		glCallList(gl_models[frame_num]);
 
 		/* draw wireframe */
@@ -496,7 +497,7 @@ int main(int argc, char **argv)
 			glPolygonMode(GL_FRONT, GL_LINE);
 			glMaterialfv(GL_FRONT, GL_EMISSION, white);
 			glPolygonOffset(0, -1);
-			glCallList(gl_models[0]);
+			glCallList(gl_models[frame_num]);
 		}
 
 		/* restore matrix */
