@@ -54,7 +54,7 @@
 /* gl */
 #include "thirdparty/TinyGL/inc/gl.h"
 #include "thirdparty/TinyGL/inc/glu.h"
-#include "thirdparty/TinyGL/inc/oscontext.h"
+#include "thirdparty/TinyGL/inc/ostinygl.h"
 
 /* shim */
 #include "shim.h"
