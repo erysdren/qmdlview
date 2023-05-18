@@ -98,8 +98,8 @@ typedef struct
 #define BPP 16
 
 /* aspect ratios */
-#define ASPECT_WH (float)WIDTH / (float)HEIGHT
-#define ASPECT_HW (float)HEIGHT / (float)WIDTH
+#define ASPECT_WH (float)gl_context->width / (float)gl_context->height
+#define ASPECT_HW (float)gl_context->height / (float)gl_context->width
 
 /* camera settings */
 #define SPEED 2
@@ -129,7 +129,6 @@ typedef struct
 
 /* gl */
 ostgl_context *gl_context;
-void *gl_pixels;
 GLint *gl_models;
 GLuint gl_texture;
 void *gl_texture_pixels;
@@ -176,10 +175,10 @@ void draw_font8x8(int x, int y, uint16_t c, uint8_t *bitmap)
 	{
 		for (xx = 0; xx < 8; xx++)
 		{
-			if (x + xx > WIDTH - 1 || y + yy > HEIGHT - 1) return;
+			if (x + xx > gl_context->width - 1 || y + yy > gl_context->height - 1) return;
 
 			if (bitmap[yy] & 1 << xx)
-				((uint16_t *)gl_pixels)[((y + yy) * WIDTH) + (x + xx)] = c;
+				((uint16_t *)gl_context->pixels)[((y + yy) * gl_context->width) + (x + xx)] = c;
 		}
 	}
 }
@@ -227,10 +226,8 @@ void draw_text(int x, int y, uint16_t c, const char *fmt, ...)
 int qmdlview_init()
 {
 	/* gl */
-	gl_pixels = malloc(WIDTH * HEIGHT * (BPP / 8));
-	gl_context = ostgl_create_context(WIDTH, HEIGHT, BPP, &gl_pixels, 1);
+	gl_context = ostgl_create_context(WIDTH, HEIGHT, BPP);
 	if (gl_context == NULL) return shim_error("couldn't allocate gl context");
-	ostgl_make_current(gl_context, 0);
 
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_LIGHTING);
@@ -238,7 +235,7 @@ int qmdlview_init()
 	glFrontFace(GL_CW);
 
 	/* init shim */
-	if (!shim_init(WIDTH, HEIGHT, BPP, "qmdlview"))
+	if (!shim_init(gl_context->width, gl_context->height, gl_context->depth, "qmdlview"))
 		return shim_error("couldn't init shim!");
 
 	/* return success */
@@ -253,7 +250,6 @@ void qmdlview_deinit()
 {
 	/* free */
 	if (gl_context) ostgl_delete_context(gl_context);
-	if (gl_pixels) free(gl_pixels);
 	if (gl_texture_pixels) free(gl_texture_pixels);
 	if (gl_models) free(gl_models);
 	if (mdl) MDL_Free(mdl);
@@ -418,7 +414,7 @@ void qmdlview_camera()
 	 */
 
 	/* set viewport */
-	glViewport(0, 0, (GLint)WIDTH, (GLint)HEIGHT);
+	glViewport(0, 0, (GLint)gl_context->width, (GLint)gl_context->height);
 
 	/* set perspective */
 	glMatrixMode(GL_PROJECTION);
@@ -510,7 +506,7 @@ int main(int argc, char **argv)
 		draw_text(2, 2, PALETTE_RGB565(254), "WASD: move\nARROW KEYS: look\nTAB: wireframe\nESCAPE: quit\nMOUSE: click\nFRAME: %d / %d", frame_num + 1, mdl->header->num_frames);
 
 		/* blit to screen */
-		shim_blit(WIDTH, HEIGHT, BPP, gl_pixels);
+		shim_blit(gl_context->width, gl_context->height, gl_context->depth, gl_context->pixels);
 	}
 
 	/* deinit */
