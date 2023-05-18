@@ -39,16 +39,18 @@
 
 CC = i586-pc-msdosdjgpp-gcc 
 
-CFLAGS += -Wall -pedantic -O2 -DQMDLVIEW_DOS
+CFLAGS += -Wall -pedantic -Wextra -O3
 
-SOURCES = qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
+SOURCES = shim.c qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
 
-DOS = platform_dos.c
+DOS = -DSHIM_DOS=1
+
+TINYGL = -Lthirdparty/TinyGL/lib_djgpp -lTinyGL -lm
 
 all: clean qmdlview
 
 qmdlview: $(SOURCES)
-	$(CC) -o qmdlview $(SOURCES) $(DOS) $(CFLAGS)
+	$(CC) -o qmdlview $(SOURCES) $(DOS) $(TINYGL) $(CFLAGS)
 
 clean:
 	$(RM) qmdlview *.exe

@@ -52,8 +52,8 @@
 /* mdl */
 #include "mdl.h"
 
-/* platform */
-#include "platform.h"
+/* shim */
+#include "shim.h"
 
 /* mdl magics */
 const char mdl_magic_quake[4] = "IDPO";
@@ -69,7 +69,11 @@ mdl_t *MDL_Load(const char *filename)
 
 	/* open file */
 	file = fopen(filename, "rb");
-	if (file == NULL) platform_error("couldn't load %s", filename);
+	if (file == NULL)
+	{
+		shim_error("couldn't load %s", filename);
+		return NULL;
+	}
 
 	/* allocate memory */
 	mdl = calloc(1, sizeof(mdl_t));
@@ -82,31 +86,31 @@ mdl_t *MDL_Load(const char *filename)
 	/* check file signature */
 	if (!memcmp(mdl->version->magic, mdl_magic_quake2, 4) != 0)
 	{
-		platform_error("%s is a Quake 2 model file, which is currently not supported.", filename);
+		shim_error("%s is a Quake 2 model file, which is currently not supported.", filename);
 		return NULL;
 	}
 
 	/* check file signature */
 	if (memcmp(mdl->version->magic, mdl_magic_quake, 4) != 0)
 	{
-		platform_error("%s has an unrecognized file signature %x.", filename, mdl->version->magic);
+		shim_error("%s has an unrecognized file signature %x.", filename, mdl->version->magic);
 		return NULL;
 	}
 
 	/* check file version */
 	if (mdl->version->version == MDL_VERSION_QTEST)
 	{
-		platform_error("%s is a QTest model file, which is currently not supported.", filename);
+		shim_error("%s is a QTest model file, which is currently not supported.", filename);
 		return NULL;
 	}
 	else if (mdl->version->version == MDL_VERSION_QUAKE2)
 	{
-		platform_error("%s is a Quake 2 model file, which is currently not supported.", filename);
+		shim_error("%s is a Quake 2 model file, which is currently not supported.", filename);
 		return NULL;
 	}
 	else if (mdl->version->version != MDL_VERSION_QUAKE)
 	{
-		platform_error("%s has an unrecognized file version.", filename);
+		shim_error("%s has an unrecognized file version.", filename);
 		return NULL;
 	}
 
@@ -130,7 +134,7 @@ mdl_t *MDL_Load(const char *filename)
 		if (mdl->skins[i].skin_type != 0)
 		{
 			fclose(file);
-			platform_error("%s skin %d has an unsupported type.", i);
+			shim_error("%s skin %d has an unsupported type.", i);
 			return NULL;
 		}
 
@@ -155,7 +159,7 @@ mdl_t *MDL_Load(const char *filename)
 		if (mdl->frames[i].frame_type != 0)
 		{
 			fclose(file);
-			platform_error("%s frame %d has an unsupported type.", i);
+			shim_error("%s frame %d has an unsupported type.", i);
 			return NULL;
 		}
 

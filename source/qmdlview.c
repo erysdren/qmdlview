@@ -49,32 +49,21 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
+#include <math.h>
 
-/* drummyfish */
-#define S3L_RESOLUTION_X 640
-#define S3L_RESOLUTION_Y 480
-#define S3L_PIXEL_FUNCTION S3L_Pixel
-#define S3L_Z_BUFFER 1
-#define S3L_PERSPECTIVE_CORRECTION 1
-#define S3L_NEAR_CROSS_STRATEGY 3
-#include "thirdparty/small3dlib.h"
+/* gl */
+#include "thirdparty/TinyGL/inc/gl.h"
+#include "thirdparty/TinyGL/inc/glu.h"
+#include "thirdparty/TinyGL/inc/oscontext.h"
 
-/* platform */
-#ifdef QMDLVIEW_DOS
-#define PLATFORM_DOS 1
-#else
-#define PLATFORM_SDL2 1
-#endif
-#include "platform.h"
-
-/* bleck */
-#ifndef QMDLVIEW_DOS
-#define KEY_PLUS KEY_KP_PLUS
-#define KEY_MINUS KEY_KP_MINUS
-#endif
+/* shim */
+#include "shim.h"
 
 /* quake palette */
 #include "palette.h"
+
+/* utilities */
+#include "rgb.h"
 
 /* mdl loader */
 #include "mdl.h"
@@ -82,41 +71,8 @@
 /* font8x8 */
 #include "thirdparty/font8x8_basic.h"
 
-/* dos helpers */
-#ifdef QMDLVIEW_DOS
-#include "dos_helpers.h"
-#endif
-
 /* tinyfiledialogs */
 #include "thirdparty/tinyfiledialogs.h"
-
-/*
- *
- * macros
- *
- */
-
-#ifdef QMDLVIEW_DOS
-#define BPP 8
-#else
-#define BPP 32
-#endif
-
-#define MDL_MAGIC 0x4f504449
-
-#define PALETTE_RGB(i) ((rgb24_t *)(&palette[(i) * 3]))
-
-#define ARGB(r, g, b, a) (((a) << 24) | ((r) << 16) | ((g) << 8) | (b))
-#define RGBA(r, g, b, a) (((r) << 24) | ((g) << 16) | ((b) << 8) | (a))
-#define RGB(r, g, b) ARGB((r), (g), (b), 255)
-
-#define UNIT(i) (S3L_Unit)((i) * S3L_F)
-
-#if BPP == 8
-#define PALETTE(i) (i)
-#elif BPP == 32
-#define PALETTE(i) RGB(PALETTE_RGB(i)->r, PALETTE_RGB(i)->g, PALETTE_RGB(i)->b)
-#endif
 
 /*
  *
@@ -124,12 +80,46 @@
  *
  */
 
+/* vec3 */
 typedef struct
 {
-	uint8_t r, g, b;
-} rgb24_t;
+	float x, y, z;
+} vec3_t;
 
-typedef S3L_Model3D model_t;
+/*
+ *
+ * macros
+ *
+ */
+
+/* screen settings */
+#define WIDTH 640
+#define HEIGHT 480
+#define BPP 16
+
+/* aspect ratios */
+#define ASPECT_WH (float)WIDTH / (float)HEIGHT
+#define ASPECT_HW (float)HEIGHT / (float)WIDTH
+
+/* camera settings */
+#define SPEED 2
+#define FOV 90
+
+/* pi */
+#ifndef M_PI
+#define M_PI 3.14159265
+#endif
+#ifndef M_PI_2
+#define M_PI_2 M_PI / 2
+#endif
+
+/* get palette entry as RGB565 short */
+#define PALETTE_RGB565(x) RGB565(PALETTE_RGB24(x, palette)->r, \
+	PALETTE_RGB24(x, palette)->g, PALETTE_RGB24(x, palette)->b)
+
+/* get palette entry as 3 floats, plus fixed alpha */
+#define PALETTE_RGBAFLOAT(x) PALETTE_RGB24(x, palette)->r / 255.0f, \
+	PALETTE_RGB24(x, palette)->g / 255.0f, PALETTE_RGB24(x, palette)->b / 255.0f, 1.0f
 
 /*
  *
@@ -137,22 +127,34 @@ typedef S3L_Model3D model_t;
  *
  */
 
+/* gl */
+ostgl_context *gl_context;
+void *gl_pixels;
+GLint *gl_models;
+GLuint gl_texture;
+void *gl_texture_pixels;
+
+/* mdl */
 mdl_t *mdl;
 
-S3L_Unit *s3l_vertices;
-S3L_Index *s3l_triangles;
-S3L_Unit *s3l_uvs;
-S3L_Index *s3l_uv_indices;
-S3L_Scene s3l_scene;
-S3L_Model3D s3l_model;
-model_t *models[256];
-
+/* render settings */
 int frame_num;
-
 int wireframe;
 
+/* tinyfd */
 const char *mdl_patterns[1] = {"*.mdl"};
-const char *open_filename;
+const char *open_filename = NULL;
+
+/* camera */
+struct
+{
+	vec3_t position;
+	vec3_t rotation;
+	vec3_t look;
+	vec3_t strafe;
+	vec3_t velocity;
+	vec3_t speedkey;
+} camera;
 
 /*
  *
@@ -161,86 +163,10 @@ const char *open_filename;
  */
 
 /*
- * S3L_Pixel
- */
-
-static inline void S3L_Pixel(S3L_PixelInfo *pixel)
-{
-	/* variables */
-	S3L_Vec4 uv0;
-	S3L_Vec4 uv1;
-	S3L_Vec4 uv2;
-	S3L_Unit uv[2];
-	uint8_t *pixels;
-	int pos;
-
-	/* draw background color */
-	platform_draw_pixel(pixel->x, pixel->y, PALETTE(0));
-
-	/* get vertex uvs */
-	S3L_getIndexedTriangleValues(pixel->triangleIndex, s3l_uv_indices, s3l_uvs, 2, &uv0, &uv1, &uv2);
-
-	/* interpolate barycentric coords */
-	uv[0] = S3L_interpolateBarycentric(uv0.x, uv1.x, uv2.x, pixel->barycentric);
-	uv[1] = S3L_interpolateBarycentric(uv0.y, uv1.y, uv2.y, pixel->barycentric);
-
-	/* wrap coordinates */
-	uv[0] = S3L_wrap(uv[0], mdl->header->skin_width);
-	uv[1] = S3L_wrap(uv[1], mdl->header->skin_height);
-
-	/* draw texture */
-	pixels = (uint8_t *)mdl->skins[0].skin_pixels;
-	pos = (uv[1] * mdl->header->skin_width) + uv[0];
-	platform_draw_pixel(pixel->x, pixel->y, PALETTE(pixels[pos]));
-
-	/* draw wireframe */
-	if (wireframe && (pixel->barycentric[0] == 0 || pixel->barycentric[1] == 0 || pixel->barycentric[2] == 0))
-		platform_draw_pixel(pixel->x, pixel->y, PALETTE(254));
-}
-
-/*
- * model_alloc
- */
-
-model_t *model_alloc(int num_vertices, int num_triangles)
-{
-	/* variables */
-	model_t *model;
-	S3L_Unit *vertices;
-	S3L_Index *triangles;
-
-	/* alloc model */
-	model = malloc(sizeof(model_t));
-	if (model == NULL) return NULL;
-
-	/* alloc elements */
-	vertices = malloc(sizeof(S3L_Unit) * num_vertices * 3);
-	triangles = malloc(sizeof(S3L_Index) * num_triangles * 3);
-	if (vertices == NULL || triangles == NULL)
-		return NULL;
-
-	/* init model */
-	S3L_model3DInit(vertices, num_vertices, triangles, num_triangles, model);
-
-	/* return ptr */
-	return model;
-}
-
-void model_free(model_t *model)
-{
-	if (model)
-	{
-		if (model->vertices) free((void *)model->vertices);
-		if (model->triangles) free((void *)model->triangles);
-		free(model);
-	}
-}
-
-/*
  * draw_font8x8
  */
 
-void draw_font8x8(int x, int y, uint32_t c, uint8_t *bitmap)
+void draw_font8x8(int x, int y, uint16_t c, uint8_t *bitmap)
 {
 	/* variables */
 	int xx, yy;
@@ -250,10 +176,10 @@ void draw_font8x8(int x, int y, uint32_t c, uint8_t *bitmap)
 	{
 		for (xx = 0; xx < 8; xx++)
 		{
-			if (x + xx > S3L_RESOLUTION_X - 1 || y + yy > S3L_RESOLUTION_Y - 1) return;
+			if (x + xx > WIDTH - 1 || y + yy > HEIGHT - 1) return;
 
 			if (bitmap[yy] & 1 << xx)
-				platform_draw_pixel(x + xx, y + yy, c);
+				((uint16_t *)gl_pixels)[((y + yy) * WIDTH) + (x + xx)] = c;
 		}
 	}
 }
@@ -262,7 +188,7 @@ void draw_font8x8(int x, int y, uint32_t c, uint8_t *bitmap)
  * draw_text
  */
 
-void draw_text(int x, int y, uint32_t c, const char *fmt, ...)
+void draw_text(int x, int y, uint16_t c, const char *fmt, ...)
 {
 	/* variables */
 	int i, p, n;
@@ -298,21 +224,25 @@ void draw_text(int x, int y, uint32_t c, const char *fmt, ...)
  * qmdlview_init
  */
 
-void qmdlview_init()
+int qmdlview_init()
 {
-	/* init platform */
-	if (!platform_init(S3L_RESOLUTION_X, S3L_RESOLUTION_Y, BPP, "qmdlview"))
-		platform_error("could not init platform!\n");
+	/* gl */
+	gl_pixels = malloc(WIDTH * HEIGHT * (BPP / 8));
+	gl_context = ostgl_create_context(WIDTH, HEIGHT, BPP, &gl_pixels, 1);
+	if (gl_context == NULL) return shim_error("couldn't allocate gl context");
+	ostgl_make_current(gl_context, 0);
 
-	/* set palette */
-	#ifdef QMDLVIEW_DOS
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_DEPTH_TEST);
+	glFrontFace(GL_CW);
 
-	for (int i = 0; i < 256; i++)
-	{
-		dos_set_palette_color(i, PALETTE_RGB(i)->r, PALETTE_RGB(i)->g, PALETTE_RGB(i)->b);
-	}
+	/* init shim */
+	if (!shim_init(WIDTH, HEIGHT, BPP, "qmdlview"))
+		return shim_error("couldn't init shim!");
 
-	#endif
+	/* return success */
+	return SHIM_TRUE;
 }
 
 /*
@@ -321,105 +251,184 @@ void qmdlview_init()
 
 void qmdlview_deinit()
 {
-	int i;
-
-	/* free memory */
-	for (i = 0; i < mdl->header->num_frames; i++)
-	{
-		model_free(models[i]);
-	}
-
+	/* free */
+	if (gl_context) ostgl_delete_context(gl_context);
+	if (gl_pixels) free(gl_pixels);
+	if (gl_texture_pixels) free(gl_texture_pixels);
+	if (gl_models) free(gl_models);
 	if (mdl) MDL_Free(mdl);
-	if (s3l_vertices) free(s3l_vertices);
-	if (s3l_triangles) free(s3l_triangles);
-	if (s3l_uv_indices) free(s3l_uv_indices);
-	if (s3l_uvs) free(s3l_uvs);
 
-
-	/* close platform */
-	platform_quit();
+	/* close shim */
+	shim_quit();
 }
 
 /*
  * qmdlview_open
  */
 
-void qmdlview_open(const char *filename)
+int qmdlview_open(const char *filename)
 {
 	/* variables */
-	int i, v, t;
-	S3L_Vec4 origin;
+	int i, f, v;
+
+	/* set */
+	frame_num = 0;
 
 	/* load model */
 	mdl = MDL_Load(filename);
-	if (mdl == NULL) platform_error("couldn't load %s", filename);
+	if (mdl == NULL)
+		return shim_error("couldn't load %s", filename);
 
-	/* make a model for each frame */
+	/* allocate list */
+	gl_models = (GLint *)malloc(sizeof(GLint) * mdl->header->num_frames);
+	if (gl_models == NULL)
+		return shim_error("failed malloc in qmdlview_open");
+
+	/* create texture pixels */
+	gl_texture_pixels = malloc(mdl->header->skin_width * mdl->header->skin_height * 3);
+
+	for (i = 0; i < mdl->header->skin_width * mdl->header->skin_height; i++)
+	{
+		((uint8_t *)gl_texture_pixels)[i * 3] = palette[((uint8_t *)mdl->skins[0].skin_pixels)[i] * 3];
+		((uint8_t *)gl_texture_pixels)[(i * 3) + 1] = palette[(((uint8_t *)mdl->skins[0].skin_pixels)[i] * 3) + 1];
+		((uint8_t *)gl_texture_pixels)[(i * 3) + 2] = palette[(((uint8_t *)mdl->skins[0].skin_pixels)[i] * 3) + 2];
+	}
+
+	/* generate texture */
+	glGenTextures(1, &gl_texture);
+	glBindTexture(GL_TEXTURE_2D, gl_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, mdl->header->skin_width, mdl->header->skin_height, 0, GL_RGB, GL_UNSIGNED_BYTE, gl_texture_pixels);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	/* create lists */
 	for (i = 0; i < mdl->header->num_frames; i++)
 	{
-		/* variables */
-		S3L_Unit *vertices;
-		S3L_Index *triangles;
+		/* new list */
+		gl_models[i] = glGenLists(1);
+		glNewList(gl_models[i], GL_COMPILE);
 
-		/* alloc model */
-		models[i] = model_alloc(mdl->header->num_vertices, mdl->header->num_faces);
+		/* begin triangles */
+		glBindTexture(GL_TEXTURE_2D, gl_texture);
+		glEnable(GL_TEXTURE_2D);
+		glBegin(GL_TRIANGLES);
 
-		/* assign ptrs */
-		vertices = (S3L_Unit *)models[i]->vertices;
-		triangles = (S3L_Index *)models[i]->triangles;
-
-		/* calculate vertices */
-		for (v = 0; v < mdl->header->num_vertices; v++)
+		/* do vertices */
+		for (f = 0; f < mdl->header->num_faces; f++)
 		{
-			vertices[v * 3] = UNIT(((float)mdl->frames[i].vertices[v].coordinates[0] * mdl->header->scale[0]) + mdl->header->translation[0]);
-			vertices[(v * 3) + 1] = UNIT(((float)mdl->frames[i].vertices[v].coordinates[1] * mdl->header->scale[1]) + mdl->header->translation[1]);
-			vertices[(v * 3) + 2] = UNIT(((float)mdl->frames[i].vertices[v].coordinates[2] * mdl->header->scale[2]) + mdl->header->translation[2]);
+			for (v = 0; v < 3; v++)
+			{
+				GLfloat x, y, z, s, t;
+
+				x = (mdl->frames[i].vertices[mdl->faces[f].vertex_indicies[v]].coordinates[0] * mdl->header->scale[0]) + mdl->header->translation[0];
+				y = (mdl->frames[i].vertices[mdl->faces[f].vertex_indicies[v]].coordinates[1] * mdl->header->scale[1]) + mdl->header->translation[1];
+				z = (mdl->frames[i].vertices[mdl->faces[f].vertex_indicies[v]].coordinates[2] * mdl->header->scale[2]) + mdl->header->translation[2];
+
+				s = (float)mdl->texcoords[mdl->faces[f].vertex_indicies[v]].s / (float)mdl->header->skin_width;
+				t = (float)mdl->texcoords[mdl->faces[f].vertex_indicies[v]].t / (float)mdl->header->skin_height;
+
+				glTexCoord2f(s, t);
+				glVertex3f(x, y, z);
+			}
 		}
 
-		/* calculate triangles */
-		for (t = 0; t < mdl->header->num_faces; t++)
-		{
-			triangles[t * 3] = mdl->faces[t].vertex_indicies[0];
-			triangles[(t * 3) + 1] = mdl->faces[t].vertex_indicies[1];
-			triangles[(t * 3) + 2] = mdl->faces[t].vertex_indicies[2];
-		}
+		/* end triangles */
+		glEnd();
+		glDisable(GL_TEXTURE_2D);
 
-		/* fix transform */
-		models[i]->transform.rotation.x += 128;
+		/* end list */
+		glEndList();
 	}
 
-	/* allocate s3l uvs */
-	s3l_uvs = calloc(mdl->header->num_vertices, sizeof(S3L_Unit) * 2);
-	if (s3l_uvs == NULL) platform_error("couldn't allocate uvs");
+	/* return success */
+	return SHIM_TRUE;
+}
 
-	/* claculate uvs */
-	for (i = 0; i < mdl->header->num_vertices; i++)
+/*
+ * qmdlview_camera
+ */
+
+void qmdlview_camera()
+{
+	/*
+	 * process inputs
+	 */
+
+	/* speed */
+	if (shim_key_read(SHIM_KEY_LSHIFT))
 	{
-		s3l_uvs[i * 2] = mdl->texcoords[i].s;
-		s3l_uvs[(i * 2) + 1] = mdl->texcoords[i].t;
+		camera.speedkey.x = 2;
+		camera.speedkey.y = 2;
+		camera.speedkey.z = 2;
 	}
-
-	/* allocate s3l uv indices */
-	s3l_uv_indices = calloc(mdl->header->num_faces, sizeof(S3L_Index) * 3);
-	if (s3l_uv_indices == NULL) platform_error("couldn't allocate uv indices");
-
-	/* calculate uv indices */
-	for (i = 0; i < mdl->header->num_faces; i++)
+	else
 	{
-		s3l_uv_indices[i * 3] = mdl->faces[i].vertex_indicies[0];
-		s3l_uv_indices[(i * 3) + 1] = mdl->faces[i].vertex_indicies[1];
-		s3l_uv_indices[(i * 3) + 2] = mdl->faces[i].vertex_indicies[2];
+		camera.speedkey.x = 1;
+		camera.speedkey.y = 1;
+		camera.speedkey.z = 1;
 	}
 
-	/* init s3l scene */
-	S3L_sceneInit(models[0], 1, &s3l_scene);
+	/* forwards */
+	if (shim_key_read(SHIM_KEY_W))
+	{
+		camera.position.x += camera.look.x * SPEED * camera.speedkey.x;
+		camera.position.y += camera.look.y * SPEED * camera.speedkey.y;
+		camera.position.z += camera.look.z * SPEED * camera.speedkey.z;
+	}
 
-	s3l_scene.camera.transform.translation.x += S3L_F * 128;
-	s3l_scene.camera.transform.translation.z += S3L_F * 128;
+	/* backwards */
+	if (shim_key_read(SHIM_KEY_S))
+	{
+		camera.position.x -= camera.look.x * SPEED * camera.speedkey.x;
+		camera.position.y -= camera.look.y * SPEED * camera.speedkey.y;
+		camera.position.z -= camera.look.z * SPEED * camera.speedkey.z;
+	}
 
-	/* look at model */
-	S3L_vec4Init(&origin);
-	S3L_lookAt(origin, &s3l_scene.camera.transform);
+	/* left */
+	if (shim_key_read(SHIM_KEY_A))
+	{
+		camera.position.x += camera.strafe.x * SPEED * camera.speedkey.x;
+		camera.position.z += camera.strafe.z * SPEED * camera.speedkey.z;
+	}
+
+	/* right */
+	if (shim_key_read(SHIM_KEY_D))
+	{
+		camera.position.x -= camera.strafe.x * SPEED * camera.speedkey.x;
+		camera.position.z -= camera.strafe.z * SPEED * camera.speedkey.z;
+	}
+
+	/* arrow keys */
+	if (shim_key_read(SHIM_KEY_UP)) camera.rotation.x += 0.1f;
+	if (shim_key_read(SHIM_KEY_DOWN)) camera.rotation.x -= 0.1f;
+	if (shim_key_read(SHIM_KEY_LEFT)) camera.rotation.y -= 0.1f;
+	if (shim_key_read(SHIM_KEY_RIGHT)) camera.rotation.y += 0.1f;
+
+	/*
+	 * gl
+	 */
+
+	/* set viewport */
+	glViewport(0, 0, (GLint)WIDTH, (GLint)HEIGHT);
+
+	/* set perspective */
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(FOV * ASPECT_HW, ASPECT_WH, 2.0f, 512.0f);
+
+	/* set camera look/strafe values */
+	camera.look.x = cosf(camera.rotation.y) * cosf(camera.rotation.x);
+	camera.look.y = sinf(camera.rotation.x);
+	camera.look.z = sinf(camera.rotation.y) * cosf(camera.rotation.x);
+	camera.strafe.x = cosf(camera.rotation.y - M_PI_2);
+	camera.strafe.z = sinf(camera.rotation.y - M_PI_2);
+
+	/* set camera view */
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(camera.position.x, camera.position.y, camera.position.z, camera.position.x + camera.look.x, camera.position.y + camera.look.y, camera.position.z + camera.look.z, 0.0f, 1.0f, 0.0);
 }
 
 /*
@@ -428,14 +437,6 @@ void qmdlview_open(const char *filename)
 
 int main(int argc, char **argv)
 {
-	/* variables */
-	S3L_Vec4 v_forward, v_up, v_right;
-
-	/* init vectors */
-	S3L_vec4Init(&v_forward);
-	S3L_vec4Init(&v_up);
-	S3L_vec4Init(&v_right);
-
 	/* open model from command line */
 	if (argc > 1)
 	{
@@ -444,76 +445,65 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		#ifdef QMDLVIEW_DOS
-
-		tinyfd_forceConsole = 1;
-
-		#endif
-
 		open_filename = tinyfd_openFileDialog("Choose an MDL File", "", 1, mdl_patterns, "Quake MDL Files", 0);
 
 		if (open_filename == NULL)
-			platform_error("open_filename is NULL!");
+		{
+			shim_error("open_filename is NULL!");
+			return 1;
+		}
 
 		qmdlview_init();
 		qmdlview_open(open_filename);
 	}
 
 	/* main loop */
-	while (platform_frame())
+	while (shim_frame())
 	{
-		/* variables */
-		int dx, dy;
-
-		/* get movedir */
-		S3L_rotationToDirections(s3l_scene.camera.transform.rotation, S3L_F, &v_forward, &v_right, &v_up);
-
 		/* process inputs */
-		if (platform_key(KEY_W)) S3L_vec3Add(&s3l_scene.camera.transform.translation, v_forward);
-		if (platform_key(KEY_A)) S3L_vec3Sub(&s3l_scene.camera.transform.translation, v_right);
-		if (platform_key(KEY_S)) S3L_vec3Sub(&s3l_scene.camera.transform.translation, v_forward);
-		if (platform_key(KEY_D)) S3L_vec3Add(&s3l_scene.camera.transform.translation, v_right);
+		if (shim_key_read(SHIM_KEY_ESCAPE))
+			shim_should_quit(SHIM_TRUE);
 
-		if (platform_key(KEY_Q)) s3l_scene.camera.transform.translation.y += S3L_F * 2;
-		if (platform_key(KEY_E)) s3l_scene.camera.transform.translation.y -= S3L_F * 2;
+		if (shim_key_read(SHIM_KEY_TAB))
+			wireframe = wireframe ? SHIM_FALSE : SHIM_TRUE;
 
-		if (platform_key(KEY_UP)) s3l_scene.camera.transform.rotation.x += 4;
-		if (platform_key(KEY_DOWN)) s3l_scene.camera.transform.rotation.x -= 4;
-		if (platform_key(KEY_LEFT)) s3l_scene.camera.transform.rotation.y += 4;
-		if (platform_key(KEY_RIGHT)) s3l_scene.camera.transform.rotation.y -= 4;
-
-		if (platform_key(KEY_TAB)) wireframe = wireframe ? 0 : 1;
-
-		if (platform_key(KEY_ESCAPE)) break;
-
-		/* process mouse */
-		if (platform_mouse(NULL, NULL, &dx, &dy))
-		{
-			platform_mouse_capture();
-			s3l_scene.camera.transform.rotation.y -= dx;
-			s3l_scene.camera.transform.rotation.x -= dy;
-		}
-		else
-		{
-			platform_mouse_release();
-		}
-
-		/* clear screen */
-		platform_screen_clear(PALETTE(255));
-
-		/* frame num */
-		if (platform_key(KEY_PLUS)) frame_num++;
-		if (platform_key(KEY_MINUS)) frame_num--;
+		if (shim_key_read(SHIM_KEY_PLUS)) frame_num++;
+		if (shim_key_read(SHIM_KEY_MINUS)) frame_num--;
 		if (frame_num < 0) frame_num = 0;
 		if (frame_num >= mdl->header->num_frames) frame_num = mdl->header->num_frames - 1;
-		s3l_scene.models = models[frame_num];
+
+		/* process camera */
+		qmdlview_camera();
+
+		/* clear screen */
+		glClearColor(PALETTE_RGBAFLOAT(255));
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		/* save matrix */
+		glPushMatrix();
 
 		/* draw model */
-		S3L_newFrame();
-		S3L_drawScene(s3l_scene);
+		glRotatef(-90, 1, 0, 0);
+		glCallList(gl_models[frame_num]);
+
+		/* draw wireframe */
+		if (wireframe)
+		{
+			GLfloat white[4] = {1.0, 1.0, 1.0, 1.0};
+			glPolygonMode(GL_FRONT, GL_LINE);
+			glMaterialfv(GL_FRONT, GL_EMISSION, white);
+			glPolygonOffset(0, -1);
+			glCallList(gl_models[0]);
+		}
+
+		/* restore matrix */
+		glPopMatrix();
 
 		/* draw text */
-		draw_text(2, 2, PALETTE(254), "WASD: move\nARROW KEYS: look\nTAB: wireframe\nESCAPE: quit\nMOUSE: click\nFRAME: %d / %d", frame_num + 1, mdl->header->num_frames);
+		draw_text(2, 2, PALETTE_RGB565(254), "WASD: move\nARROW KEYS: look\nTAB: wireframe\nESCAPE: quit\nMOUSE: click\nFRAME: %d / %d", frame_num + 1, mdl->header->num_frames);
+
+		/* blit to screen */
+		shim_blit(WIDTH, HEIGHT, BPP, gl_pixels);
 	}
 
 	/* deinit */

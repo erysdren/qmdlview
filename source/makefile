@@ -37,16 +37,18 @@
 ## SOFTWARE.
 ## 
 
-CFLAGS += -Wall -pedantic -O2
+CFLAGS += -Wall -pedantic -Wextra -O3
 
-SOURCES = qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
+SOURCES = shim.c qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
 
-SDL2 = platform_sdl2.c `sdl2-config --libs --cflags`
+SDL2 = -DSHIM_SDL2=1 `sdl2-config --libs --cflags`
+
+TINYGL = -Lthirdparty/TinyGL/lib -lTinyGL -lm
 
 all: clean qmdlview
 
 qmdlview: $(SOURCES)
-	$(CC) -o qmdlview $(SOURCES) $(SDL2) $(CFLAGS)
+	$(CC) -o qmdlview $(SOURCES) $(SDL2) $(TINYGL) $(CFLAGS)
 
 clean:
 	$(RM) qmdlview *.exe
