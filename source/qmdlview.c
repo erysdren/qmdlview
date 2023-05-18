@@ -52,9 +52,9 @@
 #include <math.h>
 
 /* gl */
-#include "thirdparty/TinyGL/inc/gl.h"
-#include "thirdparty/TinyGL/inc/glu.h"
-#include "thirdparty/TinyGL/inc/ostinygl.h"
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/ostinygl.h>
 
 /* shim */
 #include "shim.h"

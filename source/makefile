@@ -43,7 +43,7 @@ SOURCES = shim.c qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
 
 SDL2 = -DSHIM_SDL2=1 `sdl2-config --libs --cflags`
 
-TINYGL = -Lthirdparty/TinyGL/lib -lTinyGL -lm
+TINYGL = -Ithirdparty/TinyGL/inc -Lthirdparty/TinyGL/lib -lTinyGL -lm
 
 all: clean qmdlview
 

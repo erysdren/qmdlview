@@ -45,7 +45,7 @@ SOURCES = shim.c qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
 
 DOS = -DSHIM_DOS=1
 
-TINYGL = -Lthirdparty/TinyGL/lib_djgpp -lTinyGL -lm
+TINYGL = -Ithirdparty/TinyGL/inc -Lthirdparty/TinyGL/lib_djgpp -lTinyGL -lm
 
 all: clean qmdlview
 
