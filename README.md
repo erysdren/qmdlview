@@ -4,7 +4,7 @@
 
 a software-rendered quake model viewer written in C. currently only supports standard version 6 quake mdl files.
 
-it can run on modern platforms with SDL2 or on DOS with VGA mode 13.
+it can run on modern platforms with SDL2 or on DOS with VESA BIOS extensions.
 
 ## todo
 
@@ -18,7 +18,7 @@ it can run on modern platforms with SDL2 or on DOS with VGA mode 13.
 
 ## thirdparty
 
-* [small3dlib](https://gitlab.com/drummyfish/small3dlib)
+* [TinyGL](https://github.com/erysdren/TinyGL)
 * [font8x8](https://github.com/dhepper/font8x8)
 * [tinyfiledialogs](https://sourceforge.net/projects/tinyfiledialogs/)
 
