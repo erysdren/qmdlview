@@ -742,9 +742,10 @@ void glFrustum(double left,double right,double bottom,double top,
 /* lists */
 unsigned int glGenLists(int range);
 int glIsList(unsigned int list);
-void glNewList(unsigned int list,int mode);
+void glNewList(unsigned int list, int mode);
 void glEndList(void);
 void glCallList(unsigned int list);
+void glDeleteLists(unsigned int list, int range);
 
 /* clear */
 void glClear(int mask);
@@ -810,7 +811,6 @@ void glPolygonOffset(GLfloat factor, GLfloat units);
   /*
 inline void glPointSize(float) {}
 inline void glLineWidth(float) {}
-inline void glDeleteLists(int, int) {}
 inline void glDepthFunc(int) {}
 inline void glBlendFunc(int, int) {}
 inline void glTexEnvf(int, int, int) {}
