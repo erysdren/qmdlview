@@ -143,6 +143,7 @@ int wireframe;
 /* tinyfd */
 const char *mdl_patterns[1] = {"*.mdl"};
 const char *open_filename = NULL;
+size_t open_filename_len = 0;
 
 /* camera */
 struct
@@ -448,7 +449,17 @@ int main(int argc, char **argv)
 	}
 	else
 	{
+		#ifdef __HAIKU__
+
+		FILE *program = popen("filepanel -l -1 -t \"Choose an MDL File\"", "r");
+		getline(&open_filename, &open_filename_len, program);
+		pclose(program);
+
+		#else
+
 		open_filename = tinyfd_openFileDialog("Choose an MDL File", "", 1, mdl_patterns, "Quake MDL Files", 0);
+
+		#endif
 
 		if (open_filename == NULL)
 		{
