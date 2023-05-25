@@ -50,6 +50,9 @@
 #include <stdarg.h>
 #include <string.h>
 #include <math.h>
+#ifdef __HAIKU__
+#include <libgen.h>
+#endif
 
 /* gl */
 #include <GL/gl.h>
@@ -451,9 +454,13 @@ int main(int argc, char **argv)
 	{
 		#ifdef __HAIKU__
 
+		char temppath[PATH_MAX];
+
 		FILE *program = popen("filepanel -l -1 -t \"Choose an MDL File\"", "r");
-		getline(&open_filename, &open_filename_len, program);
+		fgets(temppath, PATH_MAX, program);
 		pclose(program);
+
+		open_filename = realpath(temppath, NULL);
 
 		#else
 
@@ -469,6 +476,10 @@ int main(int argc, char **argv)
 
 		qmdlview_init();
 		qmdlview_open(open_filename);
+
+		#ifdef __HAIKU__
+		free(open_filename);
+		#endif
 	}
 
 	/* main loop */
