@@ -39,6 +39,12 @@
  *
  * ************************************************************************* */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stdint.h>
+
 //
 // MDL types
 //
@@ -139,3 +145,7 @@ mdl_t *MDL_Load(const char *filename);
 
 // Free an id Software MDL object from memory.
 void MDL_Free(mdl_t *mdl);
+
+#ifdef __cplusplus
+}
+#endif

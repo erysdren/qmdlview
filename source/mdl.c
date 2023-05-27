@@ -48,16 +48,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 /* mdl */
 #include "mdl.h"
 
-/* shim */
-#include "shim.h"
-
 /* mdl magics */
 const char mdl_magic_quake[4] = "IDPO";
 const char mdl_magic_quake2[4] = "IDP2";
+
+void MDL_Error(const char *s, ...)
+{
+	/* variables */
+	va_list ap;
+	char scratch[256];
+
+	/* do vargs */
+	va_start(ap, s);
+	vsnprintf(scratch, 256, s, ap);
+	va_end(ap);
+
+	/* print to stderr */
+	fprintf(stderr, "%s\n", scratch);
+}
 
 /* Load an id Software MDL file into memory. Returns a pointer to an MDL object. */
 mdl_t *MDL_Load(const char *filename)
@@ -71,7 +84,7 @@ mdl_t *MDL_Load(const char *filename)
 	file = fopen(filename, "rb");
 	if (file == NULL)
 	{
-		shim_error("couldn't load %s", filename);
+		MDL_Error("couldn't load %s", filename);
 		return NULL;
 	}
 
@@ -86,31 +99,31 @@ mdl_t *MDL_Load(const char *filename)
 	/* check file signature */
 	if (!memcmp(mdl->version->magic, mdl_magic_quake2, 4) != 0)
 	{
-		shim_error("%s is a Quake 2 model file, which is currently not supported.", filename);
+		MDL_Error("%s is a Quake 2 model file, which is currently not supported.", filename);
 		return NULL;
 	}
 
 	/* check file signature */
 	if (memcmp(mdl->version->magic, mdl_magic_quake, 4) != 0)
 	{
-		shim_error("%s has an unrecognized file signature %x.", filename, mdl->version->magic);
+		MDL_Error("%s has an unrecognized file signature %x.", filename, mdl->version->magic);
 		return NULL;
 	}
 
 	/* check file version */
 	if (mdl->version->version == MDL_VERSION_QTEST)
 	{
-		shim_error("%s is a QTest model file, which is currently not supported.", filename);
+		MDL_Error("%s is a QTest model file, which is currently not supported.", filename);
 		return NULL;
 	}
 	else if (mdl->version->version == MDL_VERSION_QUAKE2)
 	{
-		shim_error("%s is a Quake 2 model file, which is currently not supported.", filename);
+		MDL_Error("%s is a Quake 2 model file, which is currently not supported.", filename);
 		return NULL;
 	}
 	else if (mdl->version->version != MDL_VERSION_QUAKE)
 	{
-		shim_error("%s has an unrecognized file version.", filename);
+		MDL_Error("%s has an unrecognized file version.", filename);
 		return NULL;
 	}
 
@@ -134,7 +147,7 @@ mdl_t *MDL_Load(const char *filename)
 		if (mdl->skins[i].skin_type != 0)
 		{
 			fclose(file);
-			shim_error("%s skin %d has an unsupported type.", i);
+			MDL_Error("%s skin %d has an unsupported type.", i);
 			return NULL;
 		}
 
@@ -159,7 +172,7 @@ mdl_t *MDL_Load(const char *filename)
 		if (mdl->frames[i].frame_type != 0)
 		{
 			fclose(file);
-			shim_error("%s frame %d has an unsupported type.", i);
+			MDL_Error("%s frame %d has an unsupported type.", i);
 			return NULL;
 		}
 

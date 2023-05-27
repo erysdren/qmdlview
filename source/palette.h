@@ -1,4 +1,8 @@
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* quake palette */
 
 uint8_t palette[] = {
@@ -261,3 +265,7 @@ uint8_t palette[] = {
 };
 
 unsigned int palette_len = 768;
+
+#ifdef __cplusplus
+}
+#endif
