@@ -37,15 +37,15 @@
 ## SOFTWARE.
 ## 
 
-CC = i586-pc-msdosdjgpp-gcc 
+CC ?= i586-pc-msdosdjgpp-gcc 
+PKGCONFIG ?= pkg-config
 
 CFLAGS += -Wall -pedantic -Wextra -O3
 
 SOURCES = shim.c qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
 
 DOS = -DSHIM_DOS=1
-
-TINYGL = -Ithirdparty/TinyGL/inc -Lthirdparty/TinyGL/lib_djgpp -lTinyGL -lm
+TINYGL = $(shell $(PKGCONFIG) TinyGL --libs --cflags) -lm
 
 all: clean qmdlview
 

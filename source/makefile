@@ -37,13 +37,15 @@
 ## SOFTWARE.
 ## 
 
+CC ?= gcc
+PKGCONFIG ?= pkg-config
+
 CFLAGS += -Wall -pedantic -Wextra -O3
 
 SOURCES = shim.c qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
 
-SDL2 = -DSHIM_SDL2=1 `sdl2-config --libs --cflags`
-
-TINYGL = -Ithirdparty/TinyGL/inc -Lthirdparty/TinyGL/lib -lTinyGL -lm
+SDL2 = -DSHIM_SDL2=1 $(shell sdl2-config --libs --cflags)
+TINYGL = $(shell $(PKGCONFIG) TinyGL --libs --cflags) -lm
 
 all: clean qmdlview
 

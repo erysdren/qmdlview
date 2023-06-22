@@ -6,6 +6,8 @@ a software-rendered quake model viewer written in C. currently only supports sta
 
 it can run on modern platforms with SDL2 or on DOS with VESA BIOS extensions.
 
+rendering is done using [my fork of TinyGL](https://github.com/erysdren/TinyGL).
+
 ## todo
 
 - [ ] add support for onseam texture coords
@@ -18,7 +20,6 @@ it can run on modern platforms with SDL2 or on DOS with VESA BIOS extensions.
 
 ## thirdparty
 
-* [TinyGL](https://github.com/erysdren/TinyGL)
 * [font8x8](https://github.com/dhepper/font8x8)
 * [tinyfiledialogs](https://sourceforge.net/projects/tinyfiledialogs/)
 

@@ -37,19 +37,15 @@
 ## SOFTWARE.
 ## 
 
-ifdef X86
-CC = i586-pc-haiku-gcc
-TINYGL = -Ithirdparty/TinyGL/inc -Lthirdparty/TinyGL/lib32_haiku -lTinyGL
-SDL2 = -DSHIM_SDL2=1 `sdl2-config --cflags` -L/usr/lib32 -lSDL2
-else
-CC = x86_64-unknown-haiku-gcc
-TINYGL = -Ithirdparty/TinyGL/inc -Lthirdparty/TinyGL/lib_haiku -lTinyGL
-SDL2 = -DSHIM_SDL2=1 `sdl2-config --libs --cflags`
-endif
+CC ?= x86_64-unknown-haiku-gcc
+PKGCONFIG ?= x86_64-unknown-haiku-pkg-config
 
 CFLAGS += -Wall -pedantic -Wextra -O3
 
 SOURCES = shim.c qmdlview.c mdl.c thirdparty/tinyfiledialogs.c
+
+SDL2 = -DSHIM_SDL2=1 $(shell sdl2-config --libs --cflags)
+TINYGL = $(shell $(PKGCONFIG) TinyGL --libs --cflags)
 
 all: clean qmdlview
 
