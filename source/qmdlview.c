@@ -131,7 +131,7 @@ typedef struct
  */
 
 /* gl */
-ostgl_context *gl_context;
+ostgl_context_t *gl_context;
 GLint *gl_models;
 GLuint gl_texture;
 void *gl_texture_pixels;
