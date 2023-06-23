@@ -77,57 +77,52 @@ mdl_t *MDL_Load(const char *filename)
 
 	/* allocate memory */
 	mdl = calloc(1, sizeof(mdl_t));
-	mdl->version = calloc(1, sizeof(mdl_version_t));
-	mdl->header = calloc(1, sizeof(mdl_header_t));
 
-	/* read in version header */
-	fread(mdl->version, sizeof(mdl_version_t), 1, file);
+	/* read header  */
+	fread(&mdl->header, sizeof(mdl_header_t), 1, file);
 
 	/* check file signature */
-	if (!memcmp(mdl->version->magic, mdl_magic_quake2, 4) != 0)
+	if (!memcmp(mdl->header.magic, mdl_magic_quake2, 4) != 0)
 	{
 		shim_error("%s is a Quake 2 model file, which is currently not supported.", filename);
 		return NULL;
 	}
 
 	/* check file signature */
-	if (memcmp(mdl->version->magic, mdl_magic_quake, 4) != 0)
+	if (memcmp(mdl->header.magic, mdl_magic_quake, 4) != 0)
 	{
-		shim_error("%s has an unrecognized file signature %x.", filename, mdl->version->magic);
+		shim_error("%s has an unrecognized file signature %x.", filename, mdl->header.magic);
 		return NULL;
 	}
 
 	/* check file version */
-	if (mdl->version->version == MDL_VERSION_QTEST)
+	if (mdl->header.version == MDL_VERSION_QTEST)
 	{
 		shim_error("%s is a QTest model file, which is currently not supported.", filename);
 		return NULL;
 	}
-	else if (mdl->version->version == MDL_VERSION_QUAKE2)
+	else if (mdl->header.version == MDL_VERSION_QUAKE2)
 	{
 		shim_error("%s is a Quake 2 model file, which is currently not supported.", filename);
 		return NULL;
 	}
-	else if (mdl->version->version != MDL_VERSION_QUAKE)
+	else if (mdl->header.version != MDL_VERSION_QUAKE)
 	{
 		shim_error("%s has an unrecognized file version.", filename);
 		return NULL;
 	}
 
-	/* read header  */
-	fread(mdl->header, sizeof(mdl_header_t), 1, file);
-
 	/* calculate number of pixels  */
-	num_pixels = mdl->header->skin_width * mdl->header->skin_height;
+	num_pixels = mdl->header.skin_width * mdl->header.skin_height;
 
 	/* allocate more memory */
-	mdl->skins = calloc(mdl->header->num_skins, sizeof(mdl_skin_t));
-	mdl->texcoords = calloc(mdl->header->num_vertices, sizeof(mdl_texcoord_t));
-	mdl->faces = calloc(mdl->header->num_faces, sizeof(mdl_face_t));
-	mdl->frames = calloc(mdl->header->num_frames, sizeof(mdl_frame_t));
+	mdl->skins = calloc(mdl->header.num_skins, sizeof(mdl_skin_t));
+	mdl->texcoords = calloc(mdl->header.num_vertices, sizeof(mdl_texcoord_t));
+	mdl->faces = calloc(mdl->header.num_faces, sizeof(mdl_face_t));
+	mdl->frames = calloc(mdl->header.num_frames, sizeof(mdl_frame_t));
 
 	/* read skins */
-	for (i = 0; i < mdl->header->num_skins; i++)
+	for (i = 0; i < mdl->header.num_skins; i++)
 	{
 		fread(&mdl->skins[i].skin_type, sizeof(uint32_t), 1, file);
 
@@ -143,13 +138,13 @@ mdl_t *MDL_Load(const char *filename)
 	}
 
 	/* read texcoords */
-	fread(mdl->texcoords, sizeof(mdl_texcoord_t), mdl->header->num_vertices, file);
+	fread(mdl->texcoords, sizeof(mdl_texcoord_t), mdl->header.num_vertices, file);
 
 	/* read faces */
-	fread(mdl->faces, sizeof(mdl_face_t), mdl->header->num_faces, file);
+	fread(mdl->faces, sizeof(mdl_face_t), mdl->header.num_faces, file);
 
 	/* read frames */
-	for (i = 0; i < mdl->header->num_frames; i++)
+	for (i = 0; i < mdl->header.num_frames; i++)
 	{
 		fread(&mdl->frames[i].frame_type, sizeof(uint32_t), 1, file);
 		fread(&mdl->frames[i].min, sizeof(mdl_vertex_t), 1, file);
@@ -163,8 +158,8 @@ mdl_t *MDL_Load(const char *filename)
 			return NULL;
 		}
 
-		mdl->frames[i].vertices = calloc(mdl->header->num_vertices, sizeof(mdl_vertex_t));
-		fread(mdl->frames[i].vertices, sizeof(mdl_vertex_t), mdl->header->num_vertices, file);
+		mdl->frames[i].vertices = calloc(mdl->header.num_vertices, sizeof(mdl_vertex_t));
+		fread(mdl->frames[i].vertices, sizeof(mdl_vertex_t), mdl->header.num_vertices, file);
 	}
 
 	/* close file pointer */
@@ -181,14 +176,8 @@ void MDL_Free(mdl_t *mdl)
 	int i, num_skins, num_frames;
 
 	/* set values */
-	num_skins = mdl->header->num_skins;
-	num_frames = mdl->header->num_frames;
-
-	/* free version header */
-	free(mdl->version);
-
-	/* free mdl header */
-	free(mdl->header);
+	num_skins = mdl->header.num_skins;
+	num_frames = mdl->header.num_frames;
 
 	/* free skin pixels */
 	for (i = 0; i < num_skins; i++) free(mdl->skins[i].skin_pixels);

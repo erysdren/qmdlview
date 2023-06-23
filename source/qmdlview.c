@@ -280,14 +280,14 @@ int qmdlview_open(const char *filename)
 		return shim_error("couldn't load %s", filename);
 
 	/* allocate list */
-	gl_models = (GLint *)malloc(sizeof(GLint) * mdl->header->num_frames);
+	gl_models = (GLint *)malloc(sizeof(GLint) * mdl->header.num_frames);
 	if (gl_models == NULL)
 		return shim_error("failed malloc in qmdlview_open");
 
 	/* create texture pixels */
-	gl_texture_pixels = malloc(mdl->header->skin_width * mdl->header->skin_height * 3);
+	gl_texture_pixels = malloc(mdl->header.skin_width * mdl->header.skin_height * 3);
 
-	for (i = 0; i < mdl->header->skin_width * mdl->header->skin_height; i++)
+	for (i = 0; i < mdl->header.skin_width * mdl->header.skin_height; i++)
 	{
 		((uint8_t *)gl_texture_pixels)[i * 3] = palette[((uint8_t *)mdl->skins[0].skin_pixels)[i] * 3];
 		((uint8_t *)gl_texture_pixels)[(i * 3) + 1] = palette[(((uint8_t *)mdl->skins[0].skin_pixels)[i] * 3) + 1];
@@ -297,14 +297,14 @@ int qmdlview_open(const char *filename)
 	/* generate texture */
 	glGenTextures(1, &gl_texture);
 	glBindTexture(GL_TEXTURE_2D, gl_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, mdl->header->skin_width, mdl->header->skin_height, 0, GL_RGB, GL_UNSIGNED_BYTE, gl_texture_pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, mdl->header.skin_width, mdl->header.skin_height, 0, GL_RGB, GL_UNSIGNED_BYTE, gl_texture_pixels);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	/* create lists */
-	for (i = 0; i < mdl->header->num_frames; i++)
+	for (i = 0; i < mdl->header.num_frames; i++)
 	{
 		/* new list */
 		gl_models[i] = glGenLists(1);
@@ -316,25 +316,25 @@ int qmdlview_open(const char *filename)
 		glBegin(GL_TRIANGLES);
 
 		/* do vertices */
-		for (f = 0; f < mdl->header->num_faces; f++)
+		for (f = 0; f < mdl->header.num_faces; f++)
 		{
 			for (v = 0; v < 3; v++)
 			{
 				GLfloat x, y, z, s, t;
 
-				x = (mdl->frames[i].vertices[mdl->faces[f].vertex_indicies[v]].coordinates[0] * mdl->header->scale[0]) + mdl->header->translation[0];
-				y = (mdl->frames[i].vertices[mdl->faces[f].vertex_indicies[v]].coordinates[1] * mdl->header->scale[1]) + mdl->header->translation[1];
-				z = (mdl->frames[i].vertices[mdl->faces[f].vertex_indicies[v]].coordinates[2] * mdl->header->scale[2]) + mdl->header->translation[2];
+				x = (mdl->frames[i].vertices[mdl->faces[f].vertex_indicies[v]].coordinates[0] * mdl->header.scale[0]) + mdl->header.translation[0];
+				y = (mdl->frames[i].vertices[mdl->faces[f].vertex_indicies[v]].coordinates[1] * mdl->header.scale[1]) + mdl->header.translation[1];
+				z = (mdl->frames[i].vertices[mdl->faces[f].vertex_indicies[v]].coordinates[2] * mdl->header.scale[2]) + mdl->header.translation[2];
 
 				s = (float)mdl->texcoords[mdl->faces[f].vertex_indicies[v]].s;
 				t = (float)mdl->texcoords[mdl->faces[f].vertex_indicies[v]].t;
 
 				/* handle onseam */
 				if (mdl->faces[f].face_type == 0 && mdl->texcoords[mdl->faces[f].vertex_indicies[v]].onseam)
-					s += (float)mdl->header->skin_width / 2.0f;
+					s += (float)mdl->header.skin_width / 2.0f;
 
-				s /= (float)mdl->header->skin_width;
-				t /= (float)mdl->header->skin_height;
+				s /= (float)mdl->header.skin_width;
+				t /= (float)mdl->header.skin_height;
 
 				glTexCoord2f(s, t);
 				glVertex3f(x, y, z);
@@ -495,7 +495,7 @@ int main(int argc, char **argv)
 		if (shim_key_read(SHIM_KEY_PLUS)) frame_num++;
 		if (shim_key_read(SHIM_KEY_MINUS)) frame_num--;
 		if (frame_num < 0) frame_num = 0;
-		if (frame_num >= mdl->header->num_frames) frame_num = mdl->header->num_frames - 1;
+		if (frame_num >= mdl->header.num_frames) frame_num = mdl->header.num_frames - 1;
 
 		/* process camera */
 		qmdlview_camera();
@@ -526,7 +526,7 @@ int main(int argc, char **argv)
 		glPopMatrix();
 
 		/* draw text */
-		draw_text(2, 2, PALETTE_RGB565(254), "WASD: move\nARROW KEYS: look\nTAB: wireframe\nESCAPE: quit\nMOUSE: click\nFRAME: %d / %d", frame_num + 1, mdl->header->num_frames);
+		draw_text(2, 2, PALETTE_RGB565(254), "WASD: move\nARROW KEYS: look\nTAB: wireframe\nESCAPE: quit\nMOUSE: click\nFRAME: %d / %d", frame_num + 1, mdl->header.num_frames);
 
 		/* blit to screen */
 		shim_blit(gl_context->width, gl_context->height, gl_context->depth, gl_context->pixels);

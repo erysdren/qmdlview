@@ -55,16 +55,11 @@ enum mdl_versions
 	MDL_VERSION_QUAKE2 = 7,
 };
 
-// MDL version header
-typedef struct
-{
-	uint8_t magic[4];
-	uint32_t version;
-} mdl_version_t;
-
 // MDL header
 typedef struct
 {
+	char magic[4];
+	uint32_t version;
 	float scale[3];
 	float translation[3];
 	float bounding_radius;
@@ -115,15 +110,14 @@ typedef struct
 	uint32_t frame_type;
 	mdl_vertex_t min;
 	mdl_vertex_t max;
-	uint8_t name[16];
+	char name[16];
 	mdl_vertex_t *vertices;
 } mdl_frame_t;
 
 // MDL container
 typedef struct
 {
-	mdl_version_t *version;
-	mdl_header_t *header;
+	mdl_header_t header;
 	mdl_skin_t *skins;
 	mdl_texcoord_t *texcoords;
 	mdl_face_t *faces;
